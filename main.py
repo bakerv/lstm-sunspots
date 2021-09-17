@@ -1,18 +1,10 @@
 import csv
-import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import tensorflow as tf
-import wget
+
 
 print(tf.__version__)
-
-
-def plot_series(time, series, format="-", start=0, end=None):
-    plt.plot(time[start:end], series[start:end], format)
-    plt.xlabel('Time')
-    plt.ylabel('Sunspots')
-    plt.grid(True)
-
 
 # url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/daily-min-temperatures.csv'
 # wget.download(url)
@@ -33,10 +25,6 @@ with open ('daily-min-temperatures.csv') as temp:
 
 series = np.array(min_temp)
 time = np.array(time_step)
-
-plt.figure(figsize=(10, 6))
-plot_series(time, series)
-plt.show()
 
 print(time_step)
 print(min_temp)

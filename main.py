@@ -1,14 +1,15 @@
 import csv
+import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 
-
 print(tf.__version__)
-
+#%%
 # url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/daily-min-temperatures.csv'
 # wget.download(url)
 # print('daily-min-temperatures.csv')
+
+
 #%% Data extraction
 time_step = []
 min_temp = []
@@ -25,11 +26,12 @@ with open ('daily-min-temperatures.csv') as temp:
 
 series = np.array(min_temp)
 time = np.array(time_step)
+
+
 #%% data exploration
 print(time_step)
 print(min_temp)
 print(len(min_temp))
-
 
 #%% Split data for train and test
 split_time = 2500
@@ -85,4 +87,76 @@ train_set = windowed_dataset(values_train,
                              shuffle_buffer_size)
 print(train_set)
 print(values_train.shape)
+
+#%%
+model = tf.keras.Sequential([
+    tf.keras.layers.Conv1D(filters=60, kernel_size=5,
+                           strides=1, padding = "causal",
+                           activation='relu',
+                           input_shape=[None,1]),
+    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True)),
+    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True)),
+    tf.keras.layers.Dense(30, activation='relu'),
+    tf.keras.layers.Dense(10, activation='relu'),
+    tf.keras.layers.Dense(1),
+    tf.keras.layers.Lambda(lambda x: x * 100)
+])
+
+test_lr = tf.keras.callbacks.LearningRateScheduler(
+    lambda epoch: 1e-8 * 10**(epoch /20))
+sgd_optimizer = tf.keras.optimizers.SGD(learning_rate = 1e-8, momentum=0.9)
+model.compile(loss=tf.keras.losses.Huber(),
+              optimizer=sgd_optimizer,
+              metrics=['mae'])
+history = model.fit(train_set, epochs=100, callbacks=[test_lr])
+
+#%%
+print(history.history)
+
+#%%
+plt.semilogx(history.history['lr'], history.history['loss'])
+plt.show()
+
+#%%
+tf.keras.backend.clear_session()
+
+model = tf.keras.Sequential([
+    tf.keras.layers.Conv1D(filters=60, kernel_size=5,
+                           strides=1, padding = "causal",
+                           activation='relu',
+                           input_shape=[None,1]),
+    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True)),
+    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=True)),
+    tf.keras.layers.Dense(30, activation='relu'),
+    tf.keras.layers.Dense(10, activation='relu'),
+    tf.keras.layers.Dense(1),
+    tf.keras.layers.Lambda(lambda x: x * 100)
+])
+
+sgd_optimizer = tf.keras.optimizers.SGD(learning_rate = 1e-5, momentum=0.9)
+model.compile(loss=tf.keras.losses.Huber(),
+              optimizer=sgd_optimizer,
+              metrics=['mae'])
+history = model.fit(train_set, epochs=500)
+
+#%%
+plt.plot(history.epoch, history.history['loss'])
+plt.show()
+
+#%%
+
+temp_forecast = (model_forecast(model,
+                               series[...,np.newaxis],
+                               window_size)
+[split_time - window_size:-1, -1,  0])
+
+
+#%%
+
+plt.plot(time_validation, values_validation)
+plt.plot(time_validation, temp_forecast)
+
+#%%
+
+tf.keras.metrics.mean_absolute_error(values_validation, temp_forecast).numpy()
 
